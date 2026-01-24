@@ -5,6 +5,7 @@ except ImportError:
     from markitdown_no_magika import MarkItDown
 import tempfile
 import os
+import base64
 
 st.set_page_config(page_title="MarkItDown", page_icon="📝")
 
@@ -14,7 +15,13 @@ st.write("PDFをアップロードして、Markdownに変換します。変換�
 uploaded_file = st.file_uploader("PDFファイルをアップロードしてください", type=["pdf"])
 
 if uploaded_file is not None:
-    with st.spinner("変換中..."):
+    # PDF Preview
+    st.subheader("PDF プレビュー")
+    base64_pdf = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
+    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf"></iframe>'
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
+    with st.spinner("PDFをMarkdownに変換しています... しばらくお待ちください。"):
         md = MarkItDown()
 
         # Save uploaded file to a temporary file
