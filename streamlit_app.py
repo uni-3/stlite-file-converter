@@ -3,6 +3,8 @@ import streamlit as st
 st.title("Hello stlite!")
 st.write("This is a Streamlit app running entirely in your browser.")
 
+st.page_link("pages/mekitdown.py", label="MarkItDown (PDF to MD)", icon="📝")
+
 name = st.text_input("What is your name?", "World")
 st.write(f"Hello, {name}!")
 
