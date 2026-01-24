@@ -1,0 +1,20 @@
+{
+  "name": "stlite-project",
+  "version": "1.0.0",
+  "description": "A Streamlit project running in the browser using stlite",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "stlite",
+    "streamlit",
+    "webassembly",
+    "pyodide"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@stlite/browser": "0.85.1"
+  }
+}
