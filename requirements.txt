@@ -1,3 +1,7 @@
 streamlit
 markitdown-no-magika
 pdfminer.six
+openai==1.39.0
+pypdf
+pandas
+tabulate
