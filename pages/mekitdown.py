@@ -7,27 +7,21 @@ import tempfile
 import os
 import base64
 import pypdf
-import pandas as pd
 
 st.set_page_config(page_title="MarkItDown", page_icon="📝", layout="wide")
 
 st.title("📝 MarkItDown - PDF to Markdown")
-st.write("PDFをアップロードして、Markdownに変換します。AI連携によりテーブル構造の維持も可能です。")
+st.write("PDFをアップロードして、Markdownに変換します。テーブル構造の確認には『Layoutモード』も活用できます。")
 
 # Sidebar settings
 with st.sidebar:
     st.header("⚙️ 設定")
-    api_key = st.text_input("OpenAI API Key (任意)", type="password", help="テーブルや複雑なレイアウトの抽出精度を向上させるために使用します。")
-    llm_model = st.selectbox("使用モデル", ["gpt-4o", "gpt-4o-mini"], index=0)
-
-    st.markdown("---")
-    st.info("💡 **ヒント**: PDFのテーブル構造が崩れる場合は、OpenAI APIキーを入力してAI連携を有効にするか、『📊 テーブル抽出』タブを確認してください。")
+    st.info("💡 **ヒント**: 標準のMarkdown変換でテーブル構造が崩れる場合は、『📊 Layoutモード』タブを確認してください。")
     st.markdown("""
     ### 使い方
     1. PDFファイルをアップロードします。
     2. 自動的にMarkdownへの変換が始まります。
-    3. テーブルの精度が低い場合は、OpenAI APIキーを設定して再試行してください。
-    4. または、『テーブル抽出』タブから直接テーブルデータを取得できます。
+    3. テーブルの並びが不自然な場合は、『Layoutモード』タブで物理的な配置を確認できます。
     """)
 
 uploaded_file = st.file_uploader("PDFファイルをアップロードしてください", type=["pdf"])
@@ -49,22 +43,12 @@ if uploaded_file is not None:
             st.markdown(pdf_display, unsafe_allow_html=True)
 
         with col2:
-            tab_md, tab_table = st.tabs(["📝 Markdown", "📊 テーブル抽出"])
+            tab_md, tab_layout = st.tabs(["📝 Markdown", "📊 Layoutモード"])
 
             with tab_md:
                 st.subheader("Markdown 変換結果")
                 with st.spinner("PDFをMarkdownに変換しています..."):
-                    if api_key:
-                        from openai import OpenAI
-                        try:
-                            client = OpenAI(api_key=api_key)
-                            md = MarkItDown(llm_client=client, llm_model=llm_model)
-                        except Exception as e:
-                            st.warning(f"AI連携の初期化に失敗しました。通常モードで実行します: {e}")
-                            md = MarkItDown()
-                    else:
-                        md = MarkItDown()
-
+                    md = MarkItDown()
                     try:
                         # Convert PDF to Markdown
                         result = md.convert(tmp_path)
@@ -79,9 +63,9 @@ if uploaded_file is not None:
                     except Exception as e:
                         st.error(f"MarkItDown変換エラー: {e}")
 
-            with tab_table:
-                st.subheader("データ抽出 (Layoutモード)")
-                st.write("PDFのレイアウトを維持したままテキストを抽出します。Markdownでテーブルが崩れる場合の参考にしてください。")
+            with tab_layout:
+                st.subheader("テキスト抽出 (Layoutモード)")
+                st.write("PDFの物理的なレイアウトを維持したままテキストを抽出します。テーブルの構造確認に役立ちます。")
 
                 with st.spinner("レイアウトを解析中..."):
                     try:
