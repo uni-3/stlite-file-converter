@@ -1,5 +1,8 @@
 import streamlit as st
-from markitdown import MarkItDown
+try:
+    from markitdown import MarkItDown
+except ImportError:
+    from markitdown_no_magika import MarkItDown
 import tempfile
 import os
 
