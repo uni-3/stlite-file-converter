@@ -1,3 +1,4 @@
 streamlit
 markitdown-no-magika
 pdfminer.six
+pypdf

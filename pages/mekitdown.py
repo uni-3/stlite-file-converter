@@ -7,11 +7,23 @@ except ImportError:
 import tempfile
 import os
 import base64
+import pypdf
 
-st.set_page_config(page_title="MarkItDown", page_icon="📝")
+st.set_page_config(page_title="MarkItDown", page_icon="📝", layout="wide")
 
 st.title("📝 MarkItDown - PDF to Markdown")
-st.write("PDFをアップロードして、Markdownに変換します。変換後は自由にコピーやダウンロードが可能です。")
+st.write("PDFをアップロードして、Markdownに変換します。テーブル構造の確認には『Layoutモード』も活用できます。")
+
+# Sidebar settings
+with st.sidebar:
+    st.header("⚙️ 設定")
+    st.info("💡 **ヒント**: 標準のMarkdown変換でテーブル構造が崩れる場合は、『📊 Layoutモード』タブを確認してください。")
+    st.markdown("""
+    ### 使い方
+    1. PDFファイルをアップロードするか、URLを入力します。
+    2. 自動的にMarkdownへの変換が始まります。
+    3. テーブルの並びが不自然な場合は、『Layoutモード』タブで物理的な配置を確認できます。
+    """)
 
 uploaded_file = st.file_uploader("PDFファイルをアップロードしてください", type=["pdf"])
 url = st.text_input("またはPDFのURLを入力してください")
@@ -34,43 +46,62 @@ elif url:
         st.error(f"URLからの取得に失敗しました: {e}")
 
 if pdf_content is not None:
-    # PDF Preview
-    st.subheader("PDF プレビュー")
-    base64_pdf = base64.b64encode(pdf_content).decode('utf-8')
-    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf"></iframe>'
-    st.markdown(pdf_display, unsafe_allow_html=True)
+    # Save PDF content to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp.write(pdf_content)
+        tmp_path = tmp.name
 
-    with st.spinner("PDFをMarkdownに変換しています... しばらくお待ちください。"):
-        md = MarkItDown()
+    try:
+        col1, col2 = st.columns([1, 1])
 
-        # Save PDF content to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-            tmp.write(pdf_content)
-            tmp_path = tmp.name
+        with col1:
+            # PDF Preview
+            st.subheader("📄 PDF プレビュー")
+            base64_pdf = base64.b64encode(pdf_content).decode('utf-8')
+            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
+            st.markdown(pdf_display, unsafe_allow_html=True)
 
-        try:
-            # Convert PDF to Markdown
-            result = md.convert(tmp_path)
+        with col2:
+            tab_md, tab_layout = st.tabs(["📝 Markdown", "📊 Layoutモード"])
 
-            st.success("変換が完了しました！")
+            with tab_md:
+                st.subheader("Markdown 変換結果")
+                with st.spinner("PDFをMarkdownに変換しています..."):
+                    md = MarkItDown()
+                    try:
+                        # Convert PDF to Markdown
+                        result = md.convert(tmp_path)
+                        st.success("変換完了！")
+                        st.code(result.text_content, language="markdown")
+                        st.download_button(
+                            label="Markdownとしてダウンロード",
+                            data=result.text_content,
+                            file_name=f"{os.path.splitext(pdf_name)[0]}.md",
+                            mime="text/markdown"
+                        )
+                    except Exception as e:
+                        st.error(f"MarkItDown変換エラー: {e}")
 
-            st.subheader("Markdown プレビュー")
-            # Display result in st.code for easy copying
-            st.code(result.text_content, language="markdown")
+            with tab_layout:
+                st.subheader("テキスト抽出 (Layoutモード)")
+                st.write("PDFの物理的なレイアウトを維持したままテキストを抽出します。テーブルの構造確認に役立ちます。")
 
-            # Provide download button
-            st.download_button(
-                label="Markdownとしてダウンロード",
-                data=result.text_content,
-                file_name=f"{os.path.splitext(pdf_name)[0]}.md",
-                mime="text/markdown"
-            )
+                with st.spinner("レイアウトを解析中..."):
+                    try:
+                        reader = pypdf.PdfReader(tmp_path)
+                        for i, page in enumerate(reader.pages):
+                            st.markdown(f"#### ページ {i+1}")
+                            # Layout-aware text extraction
+                            text = page.extract_text(extraction_mode="layout")
+                            st.code(text)
+                    except Exception as e:
+                        st.error(f"抽出エラー: {e}")
 
-        except Exception as e:
-            st.error(f"エラーが発生しました: {e}")
-        finally:
-            # Clean up temporary file
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+    except Exception as e:
+        st.error(f"予期しないエラーが発生しました: {e}")
+    finally:
+        # Clean up temporary file
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 else:
     st.info("PDFファイルをアップロードするか、URLを入力して開始してください。")
