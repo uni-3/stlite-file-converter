@@ -115,52 +115,54 @@ if pdf_content is not None:
         tmp_path = tmp.name
 
     try:
-        col1, col2 = st.columns([1, 1])
+        # Markdown conversion result
+        st.subheader("Markdown 変換結果")
 
-        with col1:
-            # PDF Preview
-            st.subheader("📄 PDF プレビュー")
-            base64_pdf = base64.b64encode(pdf_content).decode('utf-8')
-            # Using <embed> for better PDF compatibility in some browsers
-            pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf">'
-            st.markdown(pdf_display, unsafe_allow_html=True)
+        # Caching conversion result
+        file_id = f"{pdf_name}_{len(pdf_content)}_{enable_table_extraction}"
+        if "last_file_id" not in st.session_state or st.session_state.last_file_id != file_id:
+            with st.status("PDFをMarkdownに変換しています...", expanded=True) as status:
+                md = MarkItDown()
+                try:
+                    # Convert PDF to Markdown using MarkItDown
+                    result = md.convert(tmp_path)
+                    md_content = result.text_content
 
-        with col2:
-            st.subheader("Markdown 変換結果")
+                    # Table extraction if enabled
+                    if enable_table_extraction:
+                        status.update(label="テーブル構造を解析中...", state="running")
+                        tables = extract_tables_from_pdf(tmp_path)
+                        if tables:
+                            md_content += "\n\n## 📋 抽出されたテーブル\n\n" + "\n\n".join(tables)
+                            status.update(label="テーブルの解析が完了しました", state="complete")
+                        else:
+                            status.update(label="明確なテーブルは見つかりませんでした", state="complete")
+                    else:
+                        status.update(label="変換が完了しました", state="complete")
 
-            # Caching conversion result
-            file_id = f"{pdf_name}_{len(pdf_content)}_{enable_table_extraction}"
-            if "last_file_id" not in st.session_state or st.session_state.last_file_id != file_id:
-                with st.spinner("PDFをMarkdownに変換しています..."):
-                    md = MarkItDown()
-                    try:
-                        # Convert PDF to Markdown using MarkItDown
-                        result = md.convert(tmp_path)
-                        md_content = result.text_content
+                    st.session_state.md_content = md_content
+                    st.session_state.last_file_id = file_id
+                except Exception as e:
+                    st.error(f"MarkItDown変換エラー: {e}")
+                    status.update(label="変換中にエラーが発生しました", state="error")
 
-                        # Table extraction if enabled
-                        if enable_table_extraction:
-                            with st.status("テーブル構造を解析中...") as status:
-                                tables = extract_tables_from_pdf(tmp_path)
-                                if tables:
-                                    md_content += "\n\n## 📋 抽出されたテーブル\n\n" + "\n\n".join(tables)
-                                    status.update(label="テーブルの解析が完了しました", state="complete")
-                                else:
-                                    status.update(label="明確なテーブルは見つかりませんでした", state="complete")
+        if "md_content" in st.session_state:
+            st.code(st.session_state.md_content, language="markdown")
+            st.download_button(
+                label="Markdownとしてダウンロード",
+                data=st.session_state.md_content,
+                file_name=f"{os.path.splitext(pdf_name)[0]}.md",
+                mime="text/markdown"
+            )
 
-                        st.session_state.md_content = md_content
-                        st.session_state.last_file_id = file_id
-                    except Exception as e:
-                        st.error(f"MarkItDown変換エラー: {e}")
+        st.divider()
 
-            if "md_content" in st.session_state:
-                st.code(st.session_state.md_content, language="markdown")
-                st.download_button(
-                    label="Markdownとしてダウンロード",
-                    data=st.session_state.md_content,
-                    file_name=f"{os.path.splitext(pdf_name)[0]}.md",
-                    mime="text/markdown"
-                )
+        # PDF Preview
+        st.subheader("📄 PDF プレビュー")
+        base64_pdf = base64.b64encode(pdf_content).decode('utf-8')
+        # Using <embed> for better PDF compatibility in some browsers
+        pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf">'
+        st.markdown(pdf_display, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"予期しないエラーが発生しました: {e}")
