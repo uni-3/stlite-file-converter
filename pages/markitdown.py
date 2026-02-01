@@ -129,11 +129,12 @@ if pdf_content is not None:
                     md_content = result.text_content
 
                     # Table extraction if enabled
+                    tables_content = ""
                     if enable_table_extraction:
                         status.update(label="テーブル構造を解析中...", state="running")
                         tables = extract_tables_from_pdf(tmp_path)
                         if tables:
-                            md_content += "\n\n## 📋 抽出されたテーブル\n\n" + "\n\n".join(tables)
+                            tables_content = "## 📋 抽出されたテーブル\n\n" + "\n\n".join(tables)
                             status.update(label="テーブルの解析が完了しました", state="complete")
                         else:
                             status.update(label="明確なテーブルは見つかりませんでした", state="complete")
@@ -141,6 +142,7 @@ if pdf_content is not None:
                         status.update(label="変換が完了しました", state="complete")
 
                     st.session_state.md_content = md_content
+                    st.session_state.tables_content = tables_content
                     st.session_state.last_file_id = file_id
                 except Exception as e:
                     st.error(f"MarkItDown変換エラー: {e}")
@@ -148,9 +150,18 @@ if pdf_content is not None:
 
         if "md_content" in st.session_state:
             st.code(st.session_state.md_content, language="markdown")
+
+            if "tables_content" in st.session_state and st.session_state.tables_content:
+                st.code(st.session_state.tables_content, language="markdown")
+
+            # Combine main content and tables for download
+            download_content = st.session_state.md_content
+            if "tables_content" in st.session_state and st.session_state.tables_content:
+                download_content += "\n\n" + st.session_state.tables_content
+
             st.download_button(
                 label="Markdownとしてダウンロード",
-                data=st.session_state.md_content,
+                data=download_content,
                 file_name=f"{os.path.splitext(pdf_name)[0]}.md",
                 mime="text/markdown"
             )
